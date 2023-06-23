@@ -1,0 +1,17 @@
+{
+  "name": "block_1",
+  "version": "1.0.0",
+  "description": "my first blockchain",
+  "main": "index.ts",
+  "scripts": {
+    "tsc": "tsc"
+  },
+  "author": "Anton Balzer",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.3.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.3"
+  }
+}
