@@ -9,23 +9,23 @@ import { TransactionForm } from './transaction-form.js';
 
 export class Application implements Renderable<void> {
   private readonly node: BlockchainNode;
-  private readonly server: WebsocketController;
+  private readonly server: WebsocketController;    //этот объект отвечает за обмен данными через WebSocket
 
   // UI components:
-  private readonly transactionForm = new TransactionForm(this.requestRendering);
-  private readonly pendingTransactionsPanel = new PendingTransactionsPanel(this.requestRendering);
-  private readonly blocksPanel = new BlocksPanel(this.requestRendering);
+  private readonly transactionForm = new TransactionForm(this.requestRendering);                            //   |  Передает на обратный
+  private readonly pendingTransactionsPanel = new PendingTransactionsPanel(this.requestRendering);   //   |  вызов верхнего уровня
+  private readonly blocksPanel = new BlocksPanel(this.requestRendering);                                        //   |каждому UI-компоненту
 
-  constructor(readonly requestRendering: Callback) {
-    this.server = new WebsocketController(this.handleServerMessages);
-    this.node = new BlockchainNode();
+  constructor(readonly requestRendering: Callback) {        // ссылка на обратный вызов будет храниться в свойсве requestRendering
+    this.server = new WebsocketController(this.handleServerMessages);    //подключается к  WebSocket-серверу
+    this.node = new BlockchainNode();                   //вся логика создания блокчейна и узлов рассположена здесь
 
     this.requestRendering();
-    this.initializeBlockchain();
+    this.initializeBlockchain();              //инициализирует блокчейн
   }
 
   private async initializeBlockchain() {
-    const blocks = await this.server.requestLongestChain();
+    const blocks = await this.server.requestLongestChain();       //запрашивает у всех узлов длиннейшую цепочку
     if (blocks.length > 0) {
       this.node.initializeWith(blocks);
     } else {
@@ -35,14 +35,14 @@ export class Application implements Renderable<void> {
     this.requestRendering();
   }
 
-  render(): TemplateResult {
+  render(): TemplateResult {                  //отображает компоненты UI
     return html`
       <main>
         <h1>Blockchain node</h1>
         <aside>${this.statusLine}</aside>
         <section>${this.transactionForm.render(this.node)}</section>
         <section>
-          <form @submit="${this.generateBlock}">
+          <form @submit="${this.generateBlock}">                                                //повторно отображает дочерний компонент
             ${this.pendingTransactionsPanel.render(this.node)}
           </form>
         </section>
@@ -63,18 +63,18 @@ export class Application implements Renderable<void> {
   }
 
   private readonly generateBlock = async (event: Event): Promise<void> => {
-    event.preventDefault();
+    event.preventDefault();             //предотвращает обновление страницы
 
     // Let everyone in the network know about transactions need to be added to the blockchain.
     // Every node will try to generate a new block first for the provided transactions.
-    this.server.requestNewBlock(this.node.pendingTransactions);
-    const miningProcessIsDone = this.node.mineBlockWith(this.node.pendingTransactions);
+    this.server.requestNewBlock(this.node.pendingTransactions);         //сообщает всем другим узлам что один из них начал добычу
+    const miningProcessIsDone = this.node.mineBlockWith(this.node.pendingTransactions);    //начинает добычу блока
 
     // Updates status and disables forms.
-    this.requestRendering();
+    this.requestRendering();      //обновляте статус UI
 
-    const newBlock = await miningProcessIsDone;
-    this.addBlock(newBlock);
+    const newBlock = await miningProcessIsDone;         //ожидает завершение добычи
+    this.addBlock(newBlock);                              //добавляет блок в локальный блокчейн
   };
 
   private async addBlock(block: Block, notifyOthers = true): Promise<void> {
@@ -93,8 +93,8 @@ export class Application implements Renderable<void> {
     this.requestRendering();
   }
 
-  private readonly handleServerMessages = (message: Message) => {
-    switch (message.type) {
+  private readonly handleServerMessages = (message: Message) => {       //Отправляет сообщения от WebSocket-сервера
+    switch (message.type) {         //передает сообщение соответсвеющему обработчику
       case MessageTypes.GetLongestChainRequest: return this.handleGetLongestChainRequest(message);
       case MessageTypes.NewBlockRequest       : return this.handleNewBlockRequest(message);
       case MessageTypes.NewBlockAnnouncement  : return this.handleNewBlockAnnouncement(message);
@@ -104,7 +104,7 @@ export class Application implements Renderable<void> {
     }
   }
 
-  private handleGetLongestChainRequest(message: Message): void {
+  private handleGetLongestChainRequest(message: Message): void {        //узел отправляет свою цепочку серверу
     this.server.send({
       type: MessageTypes.GetLongestChainResponse,
       correlationId: message.correlationId,

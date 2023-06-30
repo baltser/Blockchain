@@ -5,11 +5,11 @@ import { MessageServer } from './message-server';
 type Replies = Map<WebSocket, Message>;
 
 export class BlockchainServer extends MessageServer<Message> {
-    private readonly receivedMessagesAwaitingResponse = new Map<UUID, WebSocket>();
+    private readonly receivedMessagesAwaitingResponse = new Map<UUID, WebSocket>(); //коллекция клиентских соощений, ожидающих ответов
 
     private readonly sentMessagesAwaitingReply = new Map<UUID, Replies>(); // Used as accumulator for replies from clients.
 
-    protected handleMessage(sender: WebSocket, message: Message): void {
+    protected handleMessage(sender: WebSocket, message: Message): void {       //обработчик для всех тихов сообщений
         switch (message.type) {
             case MessageTypes.GetLongestChainRequest : return this.handleGetLongestChainRequest(sender, message);
             case MessageTypes.GetLongestChainResponse: return this.handleGetLongestChainResponse(sender, message);
@@ -26,26 +26,26 @@ export class BlockchainServer extends MessageServer<Message> {
         // Otherwise immediately reply to the requestor with an empty array.
 
         if (this.clientIsNotAlone) {
-            this.receivedMessagesAwaitingResponse.set(message.correlationId, requestor);
-            this.sentMessagesAwaitingReply.set(message.correlationId, new Map()); // Map accumulates replies from clients
-            this.broadcastExcept(requestor, message);
+            this.receivedMessagesAwaitingResponse.set(message.correlationId, requestor);  //Сохраняет запрос клиента, используя в качестве ключа Id корреляции
+            this.sentMessagesAwaitingReply.set(message.correlationId, new Map()); // Map накапливает отпеты от clients
+            this.broadcastExcept(requestor, message);  //рассылает сообщения другим узлам
         } else {
             this.replyTo(requestor, {
                 type: MessageTypes.GetLongestChainResponse,
                 correlationId: message.correlationId,
-                payload: []
+                payload: []  //в блокчейне с одним узлом нет длинейших цепочек
             });
         }
     }
 
     private handleGetLongestChainResponse(sender: WebSocket, message: Message): void {
-        if (this.receivedMessagesAwaitingResponse.has(message.correlationId)) {
-            const requestor = this.receivedMessagesAwaitingResponse.get(message.correlationId);
+        if (this.receivedMessagesAwaitingResponse.has(message.correlationId)) {  //находит клиента запросившего длинейшую цепочку
+            const requestor = this.receivedMessagesAwaitingResponse.get(message.correlationId);  //получает ссылку на объект сокета клиента
 
             if (this.everyoneReplied(sender, message)) {
                 const allReplies = this.sentMessagesAwaitingReply.get(message.correlationId).values();
-                const longestChain = Array.from(allReplies).reduce(this.selectTheLongestChain);
-                this.replyTo(requestor, longestChain);
+                const longestChain = Array.from(allReplies).reduce(this.selectTheLongestChain);    //находит длинейшею цепочку
+                this.replyTo(requestor, longestChain);          //передает длинейшую цепочку
             }
         }
     }
@@ -60,17 +60,17 @@ export class BlockchainServer extends MessageServer<Message> {
 
     // NOTE: naive implementation that assumes no clients added or removed after the server requested the longest chain.
     // Otherwise the server may await a reply from a client that has never received the request.
-    private everyoneReplied(sender: WebSocket, message: Message): boolean {
+    private everyoneReplied(sender: WebSocket, message: Message): boolean {     //проверяет все ли узлы ответили на запрос
         const repliedClients = this.sentMessagesAwaitingReply
             .get(message.correlationId)
             .set(sender, message);
 
         const awaitingForClients = Array.from(this.clients).filter(c => !repliedClients.has(c));
 
-        return awaitingForClients.length === 1; // 1 - the one who requested.
+        return awaitingForClients.length === 1; // 1 - все ли узлы овтетили.
     }
 
-    private selectTheLongestChain(currentlyLongest: Message, current: Message, index: number) {
+    private selectTheLongestChain(currentlyLongest: Message, current: Message, index: number) {     // этот метод используется при сокращении массивва длинейших цепочек
         return index > 0 && current.payload.length > currentlyLongest.payload.length ? current : currentlyLongest;
     }
 

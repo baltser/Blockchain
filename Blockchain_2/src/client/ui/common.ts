@@ -1,11 +1,11 @@
 import { html, TemplateResult } from '../../../node_modules/lit-html/lit-html.js';
 import { Transaction } from '../lib/blockchain-node.js';
 
-export type Callback = () => void;
+export type Callback = () => void;    //определяет пользовательский тип функции обратного вызова
 
-export interface Renderable<T> {
-  requestRendering: Callback;
-  render(data: T): TemplateResult;
+export interface Renderable<T> {      //определяет обобщенный интерфейс
+  requestRendering: Callback;         //функция обратного вызова
+  render(data: T): TemplateResult;    //функция для отображения HTML  и использованием lit-html
 }
 
 export function titleize(text: string) {

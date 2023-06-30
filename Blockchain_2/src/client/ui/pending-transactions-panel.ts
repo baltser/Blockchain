@@ -3,7 +3,7 @@ import { BlockchainNode } from '../lib/blockchain-node.js';
 import { Callback, formatTransactions, Renderable, UI } from './common.js';
 
 export class PendingTransactionsPanel implements Renderable<Readonly<BlockchainNode>> {
-  constructor(readonly requestRendering: Callback) {}
+  constructor(readonly requestRendering: Callback) {}    //предоставление конструктору фунцию обратного вызова
 
   render(node: Readonly<BlockchainNode>): TemplateResult {
     const shouldDisableGenerate = node.noPendingTransactions || node.isMining;
@@ -11,7 +11,7 @@ export class PendingTransactionsPanel implements Renderable<Readonly<BlockchainN
       ? formatTransactions(node.pendingTransactions)
       : 'No pending transactions yet.';
 
-    return html`
+    return html`      //lit-html нуждается в размеченном шаблоне html
       <h2>Pending transactions</h2>
       <pre class="pending-transactions__list">${formattedTransactions}</pre>
       <div class="pending-transactions__form">${UI.button('GENERATE BLOCK', shouldDisableGenerate)}</form>

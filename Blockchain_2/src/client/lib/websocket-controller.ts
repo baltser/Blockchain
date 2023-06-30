@@ -9,10 +9,10 @@ interface PromiseExecutor<T> {
 
 export class WebsocketController {
   private websocket: Promise<WebSocket>;
-  private readonly messagesAwaitingReply = new Map<UUID, PromiseExecutor<Message>>();
+  private readonly messagesAwaitingReply = new Map<UUID, PromiseExecutor<Message>>();  //карта WebSocket-клиетовб ожидающих ответов
 
-  constructor(private readonly messagesCallback: (messages: Message) => void) {
-    this.websocket = this.connect();
+  constructor(private readonly messagesCallback: (messages: Message) => void) {     //передает конструкторе обратынй вызов
+    this.websocket = this.connect();          //подключается к WebServer
   }
 
   private get url(): string {
@@ -24,13 +24,13 @@ export class WebsocketController {
   private connect(): Promise<WebSocket> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(this.url);
-      ws.addEventListener('open', () => resolve(ws));
+      ws.addEventListener('open', () => resolve(ws));       //присваивает обратные вызовы сообщениям WebSocket
       ws.addEventListener('error', err => reject(err));
       ws.addEventListener('message', this.onMessageReceived);
     });
   }
 
-  private readonly onMessageReceived = (event: MessageEvent) => {
+  private readonly onMessageReceived = (event: MessageEvent) => {       //Обрабатыет входящие сообщения
     const message = JSON.parse(event.data) as Message;
 
     if (this.messagesAwaitingReply.has(message.correlationId)) {
@@ -44,7 +44,7 @@ export class WebsocketController {
   async send(message: Partial<Message>, awaitForReply: boolean = false): Promise<Message> {
     return new Promise<Message>(async (resolve, reject) => {
       if (awaitForReply) {
-        this.messagesAwaitingReply.set(message.correlationId, { resolve, reject });
+        this.messagesAwaitingReply.set(message.correlationId, { resolve, reject });       //хранит сообщения, нуждающиеся в ответе
       }
       this.websocket.then(
         ws => ws.send(JSON.stringify(message)),
